@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ガス灯時計 | ahaish</title>
+    <meta
+      name="description"
+      content="日の出と日の入りに合わせて背景とガス灯の明るさが変わる Web アプリです。"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="back-link" href="../">目次へ戻る</a>
+      <h1>ガス灯時計</h1>
+      <p>日が出ている時間か、出ていない時間かを確認できます。</p>
+    </header>
+
+    <main class="lamp-app" data-gas-lamp-app data-phase="unknown">
+      <section class="scene-shell" aria-label="ガス灯">
+        <div class="scene-viewport">
+          <div class="scene-visual" aria-hidden="true">
+            <div class="sky-mark">
+              <span class="sun-disc"></span>
+              <span class="star star-one"></span>
+              <span class="star star-two"></span>
+              <span class="star star-three"></span>
+            </div>
+
+            <div class="gas-lamp">
+              <div class="lamp-glow"></div>
+              <div class="lamp-cap"></div>
+              <div class="lantern">
+                <div class="lantern-glass">
+                  <span class="flame"></span>
+                </div>
+              </div>
+              <div class="lamp-ring"></div>
+              <div class="lamp-post"></div>
+              <div class="lamp-base"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sun-panel" aria-label="今日の日の出・日の入り">
+        <dl class="sun-times">
+          <div>
+            <dt>日の出</dt>
+            <dd data-sunrise-time>--:--</dd>
+          </div>
+          <div>
+            <dt>日の入り</dt>
+            <dd data-sunset-time>--:--</dd>
+          </div>
+        </dl>
+      </section>
+
+      <p class="location-error" role="alert" hidden data-location-error></p>
+
+      <section class="note-group" aria-label="補足説明">
+        <details class="note-panel">
+          <summary>位置情報について</summary>
+          <p>
+            日の出と日の入りの計算に位置情報を使用しています。<br>
+            位置情報はこのページから外部へ送信せず、ブラウザ内で計算しています。
+          </p>
+        </details>
+        <details class="note-panel">
+          <summary>計算について</summary>
+          <p>
+            現在地から今日の日の出と日の入りを概算します。
+          </p>
+          <p>時刻は端末のタイムゾーンでの時刻を使用します。</p>
+          <div class="explanation-box" aria-label="日の出と日の入りの計算の流れ">
+            <p>
+              <span>1. 場所を使う</span>
+              緯度で南北の位置、経度で東西の位置を見ます。同じ日でも場所が違うと、太陽が見える時刻が変わります。
+            </p>
+            <p>
+              <span>2. 今日が一年の何日目かを見る</span>
+              季節によって太陽の通り道が変わるため、日付から今日の太陽の動きを見積もります。
+            </p>
+            <p>
+              <span>3. 太陽が空のどの高さを通るか見積もる</span>
+              地球の傾きと季節をもとに、その日の太陽の高さを近似します。
+            </p>
+            <p>
+              <span>4. 地平線に近づく時刻を探す</span>
+              太陽が地平線の少し下に来る時刻を、日の出または日の入りの目安にします。空気で光が少し曲がるためです。
+            </p>
+            <p>
+              <span>5. 時計の時刻に直す</span>
+              計算した時刻を経度と端末のタイムゾーンに合わせて、画面に表示する時刻へ直します。
+            </p>
+          </div>
+          <p class="calculation-note">
+            ※実際の観測時刻とずれる可能性があります。
+          </p>
+        </details>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
