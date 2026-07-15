@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>モニターライト | ahaish</title>
+    <meta
+      name="description"
+      content="色温度を選んで、モニターを単色のライトとして使う Web アプリです。"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="back-link" href="../">目次へ戻る</a>
+      <h1>モニターライト</h1>
+      <p>色温度を選んで、画面を単色のライトにします。</p>
+    </header>
+
+    <main class="monitor-light-app" data-monitor-light-app>
+      <section class="control-band" aria-label="色温度の選択">
+        <div class="current-choice" aria-live="polite">
+          <p class="choice-label">選択中</p>
+          <p class="choice-value">
+            <span data-current-name>電球色</span>
+            <span data-current-kelvin>2700K</span>
+          </p>
+        </div>
+
+        <div class="temperature-grid" role="group" aria-label="色温度">
+          <button
+            type="button"
+            class="temperature-button"
+            data-temperature-button
+            data-name="ろうそく色"
+            data-kelvin="1800K"
+            data-color="#ffad5b"
+            aria-pressed="false"
+          >
+            <span class="temperature-swatch" style="background: #ffad5b;"></span>
+            <span>1800K</span>
+          </button>
+          <button
+            type="button"
+            class="temperature-button"
+            data-temperature-button
+            data-name="暖色"
+            data-kelvin="2200K"
+            data-color="#ffc078"
+            aria-pressed="false"
+          >
+            <span class="temperature-swatch" style="background: #ffc078;"></span>
+            <span>2200K</span>
+          </button>
+          <button
+            type="button"
+            class="temperature-button is-selected"
+            data-temperature-button
+            data-name="電球色"
+            data-kelvin="2700K"
+            data-color="#ffd6a3"
+            aria-pressed="true"
+          >
+            <span class="temperature-swatch" style="background: #ffd6a3;"></span>
+            <span>2700K</span>
+          </button>
+          <button
+            type="button"
+            class="temperature-button"
+            data-temperature-button
+            data-name="温白色"
+            data-kelvin="3000K"
+            data-color="#ffe2bd"
+            aria-pressed="false"
+          >
+            <span class="temperature-swatch" style="background: #ffe2bd;"></span>
+            <span>3000K</span>
+          </button>
+          <button
+            type="button"
+            class="temperature-button"
+            data-temperature-button
+            data-name="白色"
+            data-kelvin="4000K"
+            data-color="#fff1de"
+            aria-pressed="false"
+          >
+            <span class="temperature-swatch" style="background: #fff1de;"></span>
+            <span>4000K</span>
+          </button>
+          <button
+            type="button"
+            class="temperature-button"
+            data-temperature-button
+            data-name="昼白色"
+            data-kelvin="5000K"
+            data-color="#f4fbff"
+            aria-pressed="false"
+          >
+            <span class="temperature-swatch" style="background: #f4fbff;"></span>
+            <span>5000K</span>
+          </button>
+          <button
+            type="button"
+            class="temperature-button"
+            data-temperature-button
+            data-name="昼光色"
+            data-kelvin="6500K"
+            data-color="#e7f1ff"
+            aria-pressed="false"
+          >
+            <span class="temperature-swatch" style="background: #e7f1ff;"></span>
+            <span>6500K</span>
+          </button>
+        </div>
+      </section>
+
+      <button
+        type="button"
+        class="light-preview"
+        data-light-preview
+        aria-label="選択中の色を全面表示"
+      ></button>
+
+      <section class="note-group" aria-label="補足説明">
+        <details class="note-panel">
+          <summary>表示について</summary>
+          <p>
+            プレビュー部分と全面表示は、選んだ色温度に近い単色を表示します。
+            画面そのものの明るさは端末側の設定を使います。
+          </p>
+        </details>
+        <details class="note-panel">
+          <summary>データの扱い</summary>
+          <p>
+            このページはブラウザ内だけで動作し、入力や選択内容を外部へ送信しません。
+          </p>
+        </details>
+      </section>
+
+      <div
+        class="light-overlay"
+        data-light-overlay
+        role="dialog"
+        aria-modal="true"
+        aria-label="ライト表示"
+        hidden
+      >
+        <button
+          type="button"
+          class="overlay-close"
+          data-overlay-close
+          aria-label="元の画面に戻る"
+        >
+          &times;
+        </button>
+      </div>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
