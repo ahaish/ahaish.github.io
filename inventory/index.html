@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>備品管理 | ahaish</title>
+    <meta
+      name="description"
+      content="備品名、数量、タグ、閾値をブラウザ内に保存して管理する Web アプリです。"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="back-link" href="../">目次へ戻る</a>
+      <h1>備品管理</h1>
+      <p>備品名、数量、タグ、閾値をブラウザ内に保存して管理します。</p>
+    </header>
+
+    <main class="inventory-app" data-inventory-app>
+      <div class="workspace-grid">
+        <details class="panel collapsible-panel entry-panel" data-entry-panel>
+          <summary id="inventory-form-title">備品を登録</summary>
+
+          <div class="collapsible-content" aria-labelledby="inventory-form-title">
+            <p class="collapsible-description">
+              数量は小数、単位は任意で入力できます。
+            </p>
+
+            <form class="item-form" data-item-form>
+              <div class="form-grid">
+                <label class="field field-wide">
+                  <span>備品名</span>
+                  <input
+                    type="text"
+                    name="name"
+                    autocomplete="off"
+                    required
+                    maxlength="80"
+                    data-item-name
+                  />
+                </label>
+
+                <label class="field">
+                  <span>数量</span>
+                  <input
+                    type="number"
+                    name="quantity"
+                    min="0"
+                    step="any"
+                    value="0"
+                    inputmode="decimal"
+                    required
+                    data-item-quantity
+                  />
+                </label>
+
+                <label class="field">
+                  <span>単位</span>
+                  <input
+                    type="text"
+                    name="unit"
+                    autocomplete="off"
+                    maxlength="20"
+                    placeholder="個、kg など"
+                    data-item-unit
+                  />
+                </label>
+
+                <label class="field">
+                  <span>閾値</span>
+                  <input
+                    type="number"
+                    name="threshold"
+                    min="0"
+                    step="any"
+                    value="0"
+                    inputmode="decimal"
+                    required
+                    data-item-threshold
+                  />
+                </label>
+
+                <label class="field field-wide">
+                  <span>タグ</span>
+                  <input
+                    type="text"
+                    name="tags"
+                    autocomplete="off"
+                    maxlength="160"
+                    placeholder="文具, 消耗品"
+                    data-item-tags
+                  />
+                </label>
+              </div>
+
+              <p class="form-message" role="alert" hidden data-form-message></p>
+
+              <div class="form-actions">
+                <button type="submit" class="primary-button" data-submit-button>
+                  登録
+                </button>
+                <button
+                  type="button"
+                  class="secondary-button"
+                  hidden
+                  data-cancel-edit
+                >
+                  編集をやめる
+                </button>
+                <button
+                  type="button"
+                  class="danger-button"
+                  hidden
+                  data-delete-editing
+                >
+                  この備品を削除
+                </button>
+              </div>
+            </form>
+          </div>
+        </details>
+
+        <details class="panel collapsible-panel filter-panel">
+          <summary id="filter-title">絞り込み</summary>
+
+          <div class="collapsible-content" aria-labelledby="filter-title">
+            <p class="collapsible-description">備品名、単位、タグから探せます。</p>
+
+            <div class="filter-grid">
+              <label class="field field-wide">
+                <span>検索</span>
+                <input
+                  type="search"
+                  autocomplete="off"
+                  placeholder="備品名・タグ"
+                  data-search
+                />
+              </label>
+
+              <label class="field">
+                <span>タグ</span>
+                <select data-tag-filter>
+                  <option value="all">すべて</option>
+                </select>
+              </label>
+
+              <label class="check-field">
+                <input type="checkbox" data-low-only />
+                <span>閾値以下だけ表示</span>
+              </label>
+            </div>
+
+            <button type="button" class="secondary-button" data-clear-filters>
+              条件をクリア
+            </button>
+          </div>
+        </details>
+      </div>
+
+      <section class="inventory-section" aria-labelledby="inventory-list-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="inventory-list-title">備品一覧</h2>
+            <p data-result-count>0件を表示中</p>
+          </div>
+        </div>
+
+        <p class="empty-state" hidden data-empty-state></p>
+        <div class="item-list" role="list" data-item-list></div>
+      </section>
+
+      <div class="workspace-grid lower-grid">
+        <details class="panel collapsible-panel history-panel">
+          <summary id="history-title">操作履歴</summary>
+
+          <div class="collapsible-content" aria-labelledby="history-title">
+            <p class="collapsible-description">直近80件まで保存します。</p>
+
+            <p class="empty-state compact" hidden data-history-empty>
+              操作履歴はまだありません。
+            </p>
+            <ol class="history-list" data-history-list></ol>
+
+            <div class="history-actions">
+              <button type="button" class="ghost-button" data-clear-history>
+                履歴を消す
+              </button>
+            </div>
+          </div>
+        </details>
+
+        <section class="panel file-panel" aria-labelledby="file-title">
+          <div class="panel-heading">
+            <h2 id="file-title">ファイル</h2>
+            <p>履歴を含む全データをJSONファイルで保存・復元できます。</p>
+          </div>
+
+          <div class="file-actions">
+            <button type="button" class="secondary-button" data-export-json>
+              JSONを書き出す
+            </button>
+            <button type="button" class="secondary-button" data-import-json>
+              JSONを復元する
+            </button>
+          </div>
+
+          <input
+            type="file"
+            accept=".json,application/json"
+            hidden
+            data-import-json-input
+          />
+
+          <p class="form-message" role="status" hidden data-io-message></p>
+        </section>
+      </div>
+
+      <section class="note-group" aria-label="補足説明">
+        <details class="note-panel">
+          <summary>データの扱い</summary>
+          <p>
+            登録した内容は、このブラウザの localStorage に保存します。
+            外部へ送信しません。
+          </p>
+        </details>
+        <details class="note-panel">
+          <summary>JSONバックアップ</summary>
+          <p>
+            JSONは履歴を含む全データのバックアップです。
+          </p>
+          <p>
+            JSONの復元では現在のデータを置き換えます。
+          </p>
+        </details>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
