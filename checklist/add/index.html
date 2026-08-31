@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>チェックリストを追加 | ahaish</title>
+    <meta name="description" content="チェックリストを追加します。" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="back-link" href="../../">目次へ戻る</a>
+      <h1>チェックリストを追加</h1>
+      <p>名前、メモ、確認したいアイテムを登録します。</p>
+    </header>
+    <main class="app-shell">
+      <a class="back-link" href="../">一覧へ戻る</a>
+      <form class="panel" novalidate data-list-form>
+        <p class="form-summary" role="alert" hidden data-form-summary>入力内容を確認してください。</p>
+        <section>
+          <h2>基本情報</h2>
+          <label class="field">
+            チェックリスト名（必須）
+            <input name="name" type="text" required autocomplete="off" data-list-name data-error-key="name" />
+            <p class="field-error" hidden></p>
+          </label>
+          <label class="field">
+            メモ（任意）
+            <textarea name="memo" rows="4" data-list-memo></textarea>
+          </label>
+        </section>
+        <section>
+          <h2>アイテム</h2>
+          <div class="item-fields" data-item-fields></div>
+          <button type="button" class="button secondary" data-add-item>アイテムを追加</button>
+        </section>
+        <button class="button primary" type="submit">登録</button>
+        <p class="live-message" aria-live="polite" data-live-message></p>
+      </form>
+    </main>
+    <script src="./script.js"></script>
+  </body>
+</html>

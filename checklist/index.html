@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>チェックリスト | ahaish</title>
+    <meta name="description" content="複数のチェックリストを登録して、進み具合を確認できます。" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="back-link" href="../">目次へ戻る</a>
+      <h1>チェックリスト</h1>
+      <p>複数のチェックリストを登録して、進み具合を確認できます。</p>
+    </header>
+    <main class="app-shell">
+      <div class="page-actions" aria-label="チェックリストの操作">
+        <a class="button primary" href="./add/">チェックリストを追加</a>
+        <button class="button secondary" type="button" data-export>JSONを出力</button>
+        <label class="button secondary file-button">
+          JSONを読み込む
+          <input type="file" accept="application/json,.json" data-import-file />
+        </label>
+      </div>
+      <p class="live-message" aria-live="polite" data-live-message></p>
+      <section class="panel" aria-labelledby="list-title">
+        <h2 id="list-title">チェックリスト一覧</h2>
+        <p class="empty-state" hidden data-empty-state>チェックリストはまだありません。</p>
+        <ul class="list-cards" data-list-cards></ul>
+      </section>
+      <section class="note" aria-labelledby="storage-title">
+        <h2 id="storage-title">データの扱い</h2>
+        <p>登録した内容は、このブラウザに保存します。外部へ送信しません。</p>
+      </section>
+    </main>
+    <dialog class="confirm-dialog" aria-labelledby="confirm-title" data-confirm-dialog>
+      <form method="dialog">
+        <h2 id="confirm-title" data-confirm-title></h2>
+        <p data-confirm-description></p>
+        <div class="dialog-actions">
+          <button class="button secondary" value="cancel">キャンセル</button>
+          <button class="button danger" value="confirm" data-confirm-button></button>
+        </div>
+      </form>
+    </dialog>
+    <script src="./script.js"></script>
+  </body>
+</html>

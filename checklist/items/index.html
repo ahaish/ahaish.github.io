@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>チェックリスト | ahaish</title>
+    <meta name="description" content="チェックリストのアイテムを確認・編集します。" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="back-link" href="../../">目次へ戻る</a>
+      <h1 data-list-title>チェックリスト</h1>
+      <p data-list-memo hidden></p>
+    </header>
+    <main class="app-shell" data-app>
+      <a class="back-link" href="../">一覧へ戻る</a>
+      <section class="controls panel" aria-label="チェックリストの操作">
+        <div class="mode-control">
+          <label class="visually-hidden" for="mode">モードを選択</label>
+          <select id="mode" data-mode>
+            <option value="check">チェックモード</option>
+            <option value="edit">編集モード</option>
+          </select>
+        </div>
+        <button class="button danger" type="button" data-reset>チェックをリセット</button>
+      </section>
+      <p class="live-message" aria-live="polite" data-live-message></p>
+      <section aria-labelledby="items-title">
+        <h2 id="items-title">アイテム一覧</h2>
+        <div data-content></div>
+      </section>
+    </main>
+    <dialog class="reset-dialog" aria-labelledby="reset-dialog-title" data-reset-dialog>
+      <form method="dialog">
+        <h2 id="reset-dialog-title">チェックをリセット</h2>
+        <p>このチェックリストのチェック済み個数をすべて0に戻します。内容は変更しません。</p>
+        <div class="dialog-actions">
+          <button class="button secondary" value="cancel">キャンセル</button>
+          <button class="button danger" value="confirm">リセットする</button>
+        </div>
+      </form>
+    </dialog>
+    <script src="./script.js"></script>
+  </body>
+</html>
