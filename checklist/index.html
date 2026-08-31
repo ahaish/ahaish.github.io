@@ -16,22 +16,24 @@
     <main class="app-shell">
       <div class="page-actions" aria-label="チェックリストの操作">
         <a class="button primary" href="./add/">チェックリストを追加</a>
+      </div>
+      <p class="live-message" aria-live="polite" data-live-message hidden></p>
+      <section class="panel" aria-labelledby="list-title">
+        <h2 id="list-title">チェックリスト一覧</h2>
+        <p class="empty-state" hidden data-empty-state>チェックリストはまだありません。</p>
+        <ul class="list-cards" data-list-cards></ul>
+      </section>
+      <div class="bottom-actions" aria-label="データの操作">
         <button class="button secondary" type="button" data-export>JSONを出力</button>
         <label class="button secondary file-button">
           JSONを読み込む
           <input type="file" accept="application/json,.json" data-import-file />
         </label>
       </div>
-      <p class="live-message" aria-live="polite" data-live-message></p>
-      <section class="panel" aria-labelledby="list-title">
-        <h2 id="list-title">チェックリスト一覧</h2>
-        <p class="empty-state" hidden data-empty-state>チェックリストはまだありません。</p>
-        <ul class="list-cards" data-list-cards></ul>
-      </section>
-      <section class="note" aria-labelledby="storage-title">
-        <h2 id="storage-title">データの扱い</h2>
+      <details class="note">
+        <summary>データの扱い</summary>
         <p>登録した内容は、このブラウザに保存します。外部へ送信しません。</p>
-      </section>
+      </details>
     </main>
     <dialog class="confirm-dialog" aria-labelledby="confirm-title" data-confirm-dialog>
       <form method="dialog">

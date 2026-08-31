@@ -25,7 +25,8 @@
     return list && typeof list.id === "string" && typeof list.name === "string"
       && typeof list.memo === "string" && Array.isArray(list.items) && list.items.length > 0
       && list.items.every((item) => item && typeof item.id === "string" && typeof item.name === "string"
-        && validInteger(item.requiredCount, 1) && validInteger(item.checkedCount, 0));
+        && validInteger(item.requiredCount, 0) && validInteger(item.checkedCount, 0)
+        && (!Object.hasOwn(item, "memo") || typeof item.memo === "string"));
   }
 
   function readLists() {
@@ -46,8 +47,8 @@
       if (!item.name.trim()) {
         errors.push({ key: `item-name-${index}`, message: "アイテム名を入力してください。" });
       }
-      if (!validInteger(item.requiredCount, 1)) {
-        errors.push({ key: `item-count-${index}`, message: "必要な個数は1以上の整数で入力してください。" });
+      if (!validInteger(item.requiredCount, 0)) {
+        errors.push({ key: `item-count-${index}`, message: "必要な個数は0以上の整数で入力してください。" });
       }
     });
     return errors;
@@ -58,46 +59,52 @@
     itemNumber += 1;
     const row = document.createElement("fieldset");
     const legend = document.createElement("legend");
+    const content = document.createElement("div");
+    const topRow = document.createElement("div");
+    const actions = document.createElement("div");
     row.className = "item-row";
+    content.className = "item-row-content";
+    topRow.className = "item-row-top";
+    actions.className = "item-edit-actions";
     legend.textContent = `アイテム ${itemNumber}`;
     row.append(legend);
 
     [
-      ["アイテム名（必須）", "itemName", "item-name", "text", ""],
-      ["必要な個数（必須）", "itemCount", "item-count", "number", "1"],
-    ].forEach(([labelText, dataName, key, type, value]) => {
+      ["アイテム名（必須）", "itemName", "item-name", "text", "", topRow],
+      ["必要な個数（必須）", "itemCount", "item-count", "number", "1", topRow],
+      ["アイテムメモ（任意）", "itemMemo", "item-memo", "textarea", "", content],
+    ].forEach(([labelText, dataName, key, type, value, parent]) => {
       const label = document.createElement("label");
-      const input = document.createElement("input");
+      const input = type === "textarea" ? document.createElement("textarea") : document.createElement("input");
       const error = document.createElement("p");
       label.append(labelText);
-      input.type = type;
+      if (type !== "textarea") {
+        input.type = type;
+      }
       input.value = value;
       input.dataset[dataName] = "";
       input.dataset.errorKey = `${key}-${index}`;
-      input.required = true;
+      input.required = type !== "textarea";
       if (type === "number") {
-        input.min = "1";
+        input.min = "0";
         input.step = "1";
         input.inputMode = "numeric";
+      } else if (type === "textarea") {
+        input.rows = 3;
       } else {
         input.autocomplete = "off";
       }
       error.className = "field-error";
       error.hidden = true;
       label.append(input, error);
-      row.append(label);
+      parent.append(label);
     });
+    content.prepend(topRow);
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "button danger item-remove";
     remove.textContent = "削除";
     remove.dataset.removeItem = "";
-    const removeNote = document.createElement("p");
-    removeNote.className = "item-remove-note";
-    removeNote.id = `item-remove-note-${index}`;
-    removeNote.dataset.removeNote = "";
-    removeNote.hidden = true;
-    removeNote.textContent = "最後の1件は削除できません。";
     remove.addEventListener("click", () => {
       if (fields.children.length <= 1) {
         return;
@@ -105,7 +112,8 @@
       row.remove();
       updateRemoveButtons();
     });
-    row.append(remove, removeNote);
+    actions.append(remove);
+    row.append(content, actions);
     fields.append(row);
     updateRemoveButtons();
     return row.querySelector("[data-item-name]");
@@ -114,14 +122,7 @@
   function updateRemoveButtons() {
     const disabled = fields.children.length <= 1;
     fields.querySelectorAll("[data-remove-item]").forEach((button) => {
-      const note = button.parentElement.querySelector("[data-remove-note]");
       button.disabled = disabled;
-      note.hidden = !disabled;
-      if (disabled) {
-        button.setAttribute("aria-describedby", note.id);
-      } else {
-        button.removeAttribute("aria-describedby");
-      }
     });
   }
 
@@ -162,6 +163,7 @@
       memo: form.elements.memo.value,
       items: [...fields.querySelectorAll("fieldset")].map((row) => ({
         name: row.querySelector("[data-item-name]").value,
+        memo: row.querySelector("[data-item-memo]").value,
         requiredCount: row.querySelector("[data-item-count]").value,
       })),
     };
@@ -178,6 +180,7 @@
       items: value.items.map((item) => ({
         id: createId("item"),
         name: item.name.trim(),
+        memo: item.memo,
         requiredCount: Number(item.requiredCount),
         checkedCount: 0,
       })),

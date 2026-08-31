@@ -73,6 +73,7 @@ body {
 }
 
 .page-actions,
+.bottom-actions,
 .card-actions,
 .dialog-actions {
   display: flex;
@@ -143,8 +144,18 @@ button {
 }
 
 .panel h2,
-.note h2 {
+.note summary {
   margin-top: 0;
+}
+
+.note summary {
+  cursor: pointer;
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.note p {
+  margin-bottom: 0;
 }
 
 .list-cards {
@@ -184,9 +195,20 @@ button {
   gap: 16px;
 }
 
+.list-summary h3,
 .list-progress {
   flex: 0 0 auto;
+  font-size: 1.125rem;
   font-weight: 800;
+  line-height: 1.35;
+}
+
+.list-summary h3 {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.list-progress {
   text-align: right;
 }
 
@@ -201,7 +223,6 @@ button {
 }
 
 .live-message {
-  min-height: 1.6em;
   margin: 0;
   color: var(--accent-dark);
   font-weight: 700;
@@ -233,11 +254,13 @@ button {
 
 @media (max-width: 520px) {
   .page-actions,
+  .bottom-actions,
   .card-actions {
     flex-direction: column;
   }
 
   .page-actions .button,
+  .bottom-actions .button,
   .card-actions .button {
     width: 100%;
   }

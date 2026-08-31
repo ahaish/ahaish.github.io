@@ -7,22 +7,37 @@
     return /^\d+$/.test(String(value).trim()) && Number(value) >= minimum;
   }
 
-  function validItem(item) {
-    return item && typeof item.id === "string" && typeof item.name === "string"
-      && integer(item.requiredCount, 1) && integer(item.checkedCount, 0);
+  function normalizeItem(item) {
+    if (!item || typeof item.id !== "string" || typeof item.name !== "string"
+      || !integer(item.requiredCount, 0) || !integer(item.checkedCount, 0)
+      || (Object.hasOwn(item, "memo") && typeof item.memo !== "string")) {
+      return null;
+    }
+    return { ...item, memo: item.memo || "" };
+  }
+
+  function normalizeList(list) {
+    if (!list || typeof list.id !== "string" || typeof list.name !== "string"
+      || typeof list.memo !== "string" || !Array.isArray(list.items) || list.items.length === 0) {
+      return null;
+    }
+    const items = list.items.map(normalizeItem);
+    return items.every(Boolean) ? { ...list, items } : null;
   }
 
   function validList(list) {
-    return list && typeof list.id === "string" && typeof list.name === "string"
-      && typeof list.memo === "string" && Array.isArray(list.items) && list.items.length > 0
-      && list.items.every(validItem);
+    return Boolean(normalizeList(list));
   }
 
   function read(storage) {
     try {
       const raw = storage.getItem(KEY);
       const value = raw === null ? [] : JSON.parse(raw);
-      return Array.isArray(value) && value.every(validList) ? value : [];
+      if (!Array.isArray(value)) {
+        return [];
+      }
+      const lists = value.map(normalizeList);
+      return lists.every(Boolean) ? lists : [];
     } catch (_) {
       return [];
     }
@@ -33,9 +48,10 @@
   }
 
   function progress(list) {
+    const visible = list.items.filter((item) => item.requiredCount >= 1);
     return {
-      completed: list.items.filter((item) => item.checkedCount >= item.requiredCount).length,
-      total: list.items.length,
+      completed: visible.filter((item) => item.checkedCount >= item.requiredCount).length,
+      total: visible.length,
     };
   }
 
@@ -77,8 +93,8 @@
       if (!item.name.trim()) {
         errors.push({ key: `name-${index}`, message: "アイテム名を入力してください。" });
       }
-      if (!integer(item.requiredCount, 1)) {
-        errors.push({ key: `count-${index}`, message: "必要な個数は1以上の整数で入力してください。" });
+      if (!integer(item.requiredCount, 0)) {
+        errors.push({ key: `count-${index}`, message: "必要な個数は0以上の整数で入力してください。" });
       }
     });
     return errors;
@@ -88,20 +104,23 @@
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   }
 
-  function updateList(list, value) {
+  function updateList(list, value, createItem = makeId) {
+    const oldItems = new Map(list.items.map((item) => [item.id, item]));
     return {
       ...list,
       name: value.name.trim(),
       memo: value.memo,
-      items: value.items.map((item, index) => {
-        const old = list.items[index];
+      items: value.items.map((item) => {
+        const old = item.id && oldItems.get(item.id);
         return old ? {
           ...old,
           name: item.name.trim(),
+          memo: item.memo,
           requiredCount: Number(item.requiredCount),
         } : {
-          id: makeId("item"),
+          id: createItem("item"),
           name: item.name.trim(),
+          memo: item.memo,
           requiredCount: Number(item.requiredCount),
           checkedCount: 0,
         };
@@ -113,6 +132,8 @@
     KEY,
     integer,
     isList: validList,
+    normalizeItem,
+    normalizeList,
     normalizeCheckedCount,
     progress,
     read,
@@ -138,6 +159,11 @@
   let lists = read(localStorage);
   let list = id && lists.find((entry) => entry.id === id);
 
+  function announce(value) {
+    message.textContent = value;
+    message.hidden = !value;
+  }
+
   function text(tag, value, className) {
     const element = document.createElement(tag);
     element.textContent = value;
@@ -162,6 +188,7 @@
   function missing() {
     title.textContent = "チェックリストが見つかりません";
     app.querySelector(".controls").hidden = true;
+    resetButton.hidden = true;
     content.replaceChildren(text("p", "指定されたチェックリストは表示できませんでした。"));
   }
 
@@ -181,34 +208,38 @@
   function renderCheck() {
     const ul = document.createElement("ul");
     ul.className = "item-list";
-    list.items.forEach((item) => {
+    list.items.filter((item) => item.requiredCount >= 1).forEach((item) => {
       const done = item.checkedCount >= item.requiredCount;
       const card = document.createElement("article");
-      const status = document.createElement("div");
+      const details = document.createElement("div");
       const heading = document.createElement("h3");
       const checkLabel = document.createElement("label");
       const checkbox = document.createElement("input");
       card.className = "item-card";
-      status.className = "item-status";
+      details.className = "item-details";
       checkLabel.className = "item-check";
       checkbox.type = "checkbox";
       checkbox.checked = done;
       checkbox.setAttribute("aria-label", `${item.name}の一括チェック`);
       checkbox.addEventListener("change", () => {
         updateItem(item.id, toggle);
-        message.textContent = "";
+        announce("");
         render();
       });
       checkLabel.append(checkbox, text("span", item.name));
       heading.append(checkLabel);
-      card.append(heading);
-
+      details.append(heading);
+      if (item.memo) {
+        details.append(text("p", item.memo, "item-memo"));
+      }
+      card.append(details);
       if (item.requiredCount >= 2) {
+        const status = document.createElement("div");
         const label = document.createElement("label");
         const input = document.createElement("input");
         const error = text("p", "", "item-error");
+        status.className = "item-status";
         label.className = "count-field";
-        const labelText = text("span", `${item.name}のチェック済み個数`, "visually-hidden");
         input.type = "number";
         input.min = "0";
         input.step = "1";
@@ -221,20 +252,17 @@
             input.value = result.checkedCount;
             input.setAttribute("aria-invalid", "true");
             error.textContent = result.message;
-            message.textContent = result.message;
+            announce(result.message);
             return;
           }
           input.removeAttribute("aria-invalid");
           error.textContent = "";
           updateItem(item.id, (candidate) => ({ ...candidate, checkedCount: result.checkedCount }));
-          message.textContent = "";
+          announce("");
           render();
         });
-        label.append(labelText, input, document.createTextNode(`/${item.requiredCount}個`));
+        label.append(text("span", `${item.name}のチェック済み個数`, "visually-hidden"), input, document.createTextNode(`/${item.requiredCount}個`));
         status.append(label, error);
-      }
-
-      if (item.requiredCount >= 2) {
         card.append(status);
       }
       const li = document.createElement("li");
@@ -244,31 +272,75 @@
     content.replaceChildren(ul);
   }
 
+  function refreshEditRows(items) {
+    [...items.children].forEach((row, index) => {
+      const up = row.querySelector("[data-move-up]");
+      const down = row.querySelector("[data-move-down]");
+      const remove = row.querySelector("[data-remove-item]");
+      row.querySelector("legend").textContent = `アイテム ${index + 1}`;
+      row.querySelectorAll("[data-key]").forEach((input) => {
+        const kind = input.matches("[data-name]") ? "name" : input.matches("[data-count]") ? "count" : "memo";
+        input.dataset.key = `${kind}-${index}`;
+      });
+      up.disabled = index === 0;
+      down.disabled = index === items.children.length - 1;
+      remove.disabled = items.children.length <= 1;
+    });
+  }
+
   function itemFields(container, index, item) {
     const fieldset = document.createElement("fieldset");
+    const content = document.createElement("div");
+    const topRow = document.createElement("div");
+    const actions = document.createElement("div");
     fieldset.className = "item-row";
+    fieldset.dataset.itemId = item.id || "";
     fieldset.append(text("legend", `アイテム ${index + 1}`));
+    content.className = "item-row-content";
+    topRow.className = "item-row-top";
+    actions.className = "item-edit-actions";
     [
       ["アイテム名（必須）", "name", item.name],
       ["必要な個数（必須）", "count", item.requiredCount],
+      ["アイテムメモ（任意）", "memo", item.memo || ""],
     ].forEach(([labelText, kind, value]) => {
       const label = document.createElement("label");
-      const input = document.createElement("input");
+      const input = kind === "memo" ? document.createElement("textarea") : document.createElement("input");
       label.append(labelText);
-      input.type = kind === "count" ? "number" : "text";
-      input.required = true;
+      if (kind === "count") {
+        input.type = "number";
+        input.min = "0";
+        input.step = "1";
+        input.inputMode = "numeric";
+        input.required = true;
+      } else if (kind === "name") {
+        input.type = "text";
+        input.required = true;
+      } else {
+        input.rows = 3;
+      }
       input.value = value;
       input.dataset[kind] = "";
       input.dataset.key = `${kind}-${index}`;
-      if (kind === "count") {
-        input.min = "1";
-        input.step = "1";
-        input.inputMode = "numeric";
-      }
-      label.append(input, text("p", "", "field-error"));
-      fieldset.append(label);
+      const error = text("p", "", "field-error");
+      error.id = `item-field-error-${Date.now().toString(36)}-${index}-${kind}`;
+      error.hidden = true;
+      input.setAttribute("aria-describedby", error.id);
+      label.append(input, error);
+      (kind === "memo" ? content : topRow).append(label);
     });
+    content.prepend(topRow);
+    [["上へ", "moveUp"], ["下へ", "moveDown"], ["削除", "removeItem"]].forEach(([label, action]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = action === "removeItem" ? "button danger" : "button secondary";
+      button.textContent = label;
+      button.dataset[action] = "";
+      actions.append(button);
+    });
+    fieldset.append(content, actions);
     container.append(fieldset);
+    refreshEditRows(container);
     return fieldset.querySelector("[data-name]");
   }
 
@@ -296,20 +368,45 @@
     name.value = list.name;
     name.dataset.name = "";
     name.dataset.key = "name";
-    nameLabel.append(name, text("p", "", "field-error"));
+    const nameError = text("p", "", "field-error");
+    nameError.id = "list-name-error";
+    nameError.hidden = true;
+    name.setAttribute("aria-describedby", nameError.id);
+    nameLabel.append(name, nameError);
     memoLabel.className = "field";
     memoLabel.append("メモ（任意）");
     memoInput.rows = 4;
     memoInput.value = list.memo;
-    memoLabel.append(memoInput);
+    memoInput.dataset.memo = "";
     basic.append(nameLabel, memoLabel);
     section.append(text("h3", "アイテム"));
     items.className = "item-fields";
     list.items.forEach((item, index) => itemFields(items, index, item));
+    items.addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button) {
+        return;
+      }
+      const row = button.closest("fieldset");
+      let focusTarget = null;
+      if (button.matches("[data-move-up]") && row.previousElementSibling) {
+        items.insertBefore(row, row.previousElementSibling);
+      } else if (button.matches("[data-move-down]") && row.nextElementSibling) {
+        items.insertBefore(row.nextElementSibling, row);
+      } else if (button.matches("[data-remove-item]") && items.children.length > 1) {
+        const nextRow = row.nextElementSibling || row.previousElementSibling;
+        focusTarget = nextRow.querySelector("[data-name]");
+        row.remove();
+      }
+      refreshEditRows(items);
+      if (focusTarget) {
+        focusTarget.focus();
+      }
+    });
     add.type = "button";
     add.className = "button secondary";
     add.textContent = "アイテムを追加";
-    add.addEventListener("click", () => itemFields(items, items.children.length, { name: "", requiredCount: 1 }).focus());
+    add.addEventListener("click", () => itemFields(items, items.children.length, { name: "", memo: "", requiredCount: 1 }).focus());
     section.append(items, add);
     submit.type = "submit";
     submit.className = "button primary";
@@ -321,7 +418,9 @@
         name: name.value,
         memo: memoInput.value,
         items: [...items.children].map((row) => ({
+          id: row.dataset.itemId,
           name: row.querySelector("[data-name]").value,
+          memo: row.querySelector("[data-memo]").value,
           requiredCount: row.querySelector("[data-count]").value,
         })),
       };
@@ -329,19 +428,22 @@
       form.querySelectorAll("[aria-invalid]").forEach((input) => input.removeAttribute("aria-invalid"));
       form.querySelectorAll(".field-error").forEach((error) => {
         error.textContent = "";
+        error.hidden = true;
       });
       if (errors.length) {
         summary.hidden = false;
         errors.forEach((error) => {
           const input = form.querySelector(`[data-key="${error.key}"]`);
           input.setAttribute("aria-invalid", "true");
-          input.parentElement.querySelector(".field-error").textContent = error.message;
+          const note = input.parentElement.querySelector(".field-error");
+          note.textContent = error.message;
+          note.hidden = false;
         });
         form.querySelector("[aria-invalid]").focus();
         return;
       }
       persist(lists.map((entry) => entry.id === id ? updateList(entry, value) : entry));
-      message.textContent = "変更を保存しました。";
+      announce("変更を保存しました。");
       render();
     });
     content.replaceChildren(form);
@@ -365,15 +467,19 @@
     return;
   }
 
-  mode.addEventListener("change", render);
+  mode.addEventListener("change", () => {
+    announce("");
+    render();
+  });
   resetButton.addEventListener("click", () => dialog.showModal());
   dialog.addEventListener("close", () => {
     if (dialog.returnValue === "confirm") {
       persist(reset(lists, id));
-      message.textContent = "チェックをリセットしました。";
+      announce("チェックをリセットしました。");
       render();
     }
     resetButton.focus();
   });
+  announce("");
   render();
 }());

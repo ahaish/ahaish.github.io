@@ -131,7 +131,8 @@ button:disabled {
 
 .field input,
 .field textarea,
-.item-row input {
+.item-row input,
+.item-row textarea {
   width: 100%;
   min-height: 44px;
   padding: 8px 10px;
@@ -144,8 +145,8 @@ button:disabled {
 
 .item-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px auto;
-  align-items: end;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 12px;
   padding: 14px;
   border: 1px solid var(--border);
@@ -162,15 +163,20 @@ button:disabled {
   gap: 6px;
 }
 
-.item-remove {
-  margin-bottom: 1px;
+.item-row-content,
+.item-row-top {
+  display: grid;
+  gap: 12px;
 }
 
-.item-remove-note {
-  grid-column: 1 / -1;
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.95rem;
+.item-row-top {
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 150px);
+  align-items: start;
+}
+
+.item-edit-actions {
+  display: grid;
+  gap: 8px;
 }
 
 .form-summary,
@@ -187,7 +193,6 @@ button:disabled {
 }
 
 .live-message {
-  min-height: 1.6em;
   margin: 0;
   color: var(--accent-dark);
   font-weight: 700;
@@ -204,10 +209,14 @@ button:disabled {
 
 @media (max-width: 520px) {
   .item-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: 1fr;
   }
 
-  .item-row label:first-of-type {
-    grid-column: 1 / -1;
+  .item-row-top {
+    grid-template-columns: minmax(0, 1fr) minmax(120px, 150px);
+  }
+
+  .item-edit-actions {
+    justify-self: start;
   }
 }

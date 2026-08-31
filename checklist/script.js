@@ -7,22 +7,32 @@
     return /^\d+$/.test(String(value).trim()) && Number(value) >= minimum;
   }
 
-  function isItem(value) {
+  function normalizeItem(value) {
     return value && typeof value.id === "string" && typeof value.name === "string"
-      && validInteger(value.requiredCount, 1) && validInteger(value.checkedCount, 0);
+      && validInteger(value.requiredCount, 0) && validInteger(value.checkedCount, 0)
+      && (!Object.hasOwn(value, "memo") || typeof value.memo === "string")
+      ? { ...value, memo: value.memo || "" }
+      : null;
+  }
+
+  function normalizeList(value) {
+    return value && typeof value.id === "string" && typeof value.name === "string"
+      && typeof value.memo === "string" && Array.isArray(value.items) && value.items.length > 0
+      && value.items.map(normalizeItem).every(Boolean)
+      ? { ...value, items: value.items.map(normalizeItem) }
+      : null;
   }
 
   function isList(value) {
-    return value && typeof value.id === "string" && typeof value.name === "string"
-      && typeof value.memo === "string" && Array.isArray(value.items) && value.items.length > 0
-      && value.items.every(isItem);
+    return Boolean(normalizeList(value));
   }
 
   function readLists(storage) {
     try {
       const raw = storage.getItem(STORAGE_KEY);
       const value = raw === null ? [] : JSON.parse(raw);
-      return Array.isArray(value) && value.every(isList) ? value : [];
+      const lists = Array.isArray(value) ? value.map(normalizeList) : [];
+      return lists.every(Boolean) ? lists : [];
     } catch (_) {
       return [];
     }
@@ -30,8 +40,8 @@
 
   function progress(list) {
     return {
-      completed: list.items.filter((item) => item.checkedCount >= item.requiredCount).length,
-      total: list.items.length,
+      completed: list.items.filter((item) => item.requiredCount >= 1 && item.checkedCount >= item.requiredCount).length,
+      total: list.items.filter((item) => item.requiredCount >= 1).length,
     };
   }
 
@@ -46,8 +56,12 @@
   function parseImport(text) {
     try {
       const value = JSON.parse(text);
-      return Array.isArray(value) && value.every(isList)
-        ? { ok: true, lists: value }
+      if (!Array.isArray(value)) {
+        return { ok: false, message: "JSONファイルの形式が正しくありません。" };
+      }
+      const lists = value.map(normalizeList);
+      return lists.every(Boolean)
+        ? { ok: true, lists }
         : { ok: false, message: "JSONファイルの形式が正しくありません。" };
     } catch (_) {
       return { ok: false, message: "JSONファイルを読み込めませんでした。" };
@@ -95,6 +109,8 @@
     addImportedLists,
     exportJson,
     isList,
+    normalizeItem,
+    normalizeList,
     parseImport,
     progress,
     readLists,
@@ -120,6 +136,11 @@
 
   function save(lists) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(lists));
+  }
+
+  function announce(value) {
+    message.textContent = value;
+    message.hidden = !value;
   }
 
   function text(tag, value, className) {
@@ -186,10 +207,10 @@
     if (dialog.returnValue === "confirm" && pendingAction) {
       if (pendingAction.type === "delete") {
         save(removeList(readLists(localStorage), pendingAction.list.id));
-        message.textContent = "チェックリストを削除しました。";
+        announce("チェックリストを削除しました。");
       } else {
         save(addImportedLists(readLists(localStorage), pendingAction.lists));
-        message.textContent = `${pendingAction.lists.length}件のチェックリストを追加しました。`;
+        announce(`${pendingAction.lists.length}件のチェックリストを追加しました。`);
       }
       render();
     }
@@ -211,7 +232,7 @@
     link.download = "checklists.json";
     link.click();
     URL.revokeObjectURL(url);
-    message.textContent = "JSONファイルを出力しました。";
+    announce("JSONファイルを出力しました。");
   });
 
   importFile.addEventListener("change", () => {
@@ -223,18 +244,19 @@
     reader.addEventListener("load", () => {
       const result = parseImport(String(reader.result));
       if (!result.ok) {
-        message.textContent = result.message;
+        announce(result.message);
         importFile.value = "";
         return;
       }
       openDialog({ type: "import", lists: result.lists }, importFile);
     });
     reader.addEventListener("error", () => {
-      message.textContent = "JSONファイルを読み込めませんでした。";
+      announce("JSONファイルを読み込めませんでした。");
       importFile.value = "";
     });
     reader.readAsText(file, "UTF-8");
   });
 
+  announce("");
   render();
 }());
