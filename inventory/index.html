@@ -175,7 +175,7 @@
           <summary id="history-title">操作履歴</summary>
 
           <div class="collapsible-content" aria-labelledby="history-title">
-            <p class="collapsible-description">直近80件まで保存します。</p>
+            <p class="collapsible-description">直近10件だけ保存します。</p>
 
             <p class="empty-state compact" hidden data-history-empty>
               操作履歴はまだありません。
@@ -184,7 +184,7 @@
 
             <div class="history-actions">
               <button type="button" class="ghost-button" data-clear-history>
-                履歴を消す
+                操作履歴を消す
               </button>
             </div>
           </div>
@@ -193,7 +193,7 @@
         <section class="panel file-panel" aria-labelledby="file-title">
           <div class="panel-heading">
             <h2 id="file-title">ファイル</h2>
-            <p>履歴を含む全データをJSONファイルで保存・復元できます。</p>
+            <p>消費記録と操作履歴を含む全データをJSONファイルで保存・復元できます。</p>
           </div>
 
           <div class="file-actions">
@@ -227,10 +227,11 @@
         <details class="note-panel">
           <summary>JSONバックアップ</summary>
           <p>
-            JSONは履歴を含む全データのバックアップです。
+            JSONは消費記録と操作履歴を含む全データのバックアップです。
           </p>
           <p>
-            JSONの復元では現在のデータを置き換えます。
+            復元できるのは、このアプリで書き出したJSONです。
+            復元時は現在のデータを置き換えます。
           </p>
         </details>
       </section>

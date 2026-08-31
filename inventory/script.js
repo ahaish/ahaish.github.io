@@ -1,9 +1,13 @@
 const app = document.querySelector("[data-inventory-app]");
 
 if (app) {
-  const STORAGE_KEY = "ahaish.inventory.v1";
-  const MAX_HISTORY = 80;
+  const DATA_VERSION = 2;
+  const STORAGE_KEY = "ahaish.inventory.v2";
+  const MAX_OPERATION_HISTORY = 10;
+  const MAX_USAGE_RECORDS = 11;
   const MAX_QUANTITY = 999999999;
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const pageOpenedAt = new Date();
 
   const elements = {
     form: document.querySelector("[data-item-form]"),
@@ -42,6 +46,10 @@ if (app) {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+  });
+
+  const dayFormatter = new Intl.NumberFormat("ja-JP", {
+    maximumFractionDigits: 1,
   });
 
   const state = {
@@ -120,6 +128,16 @@ if (app) {
     return roundQuantity(Math.min(number, MAX_QUANTITY));
   }
 
+  function parseUsageAmount(value) {
+    const number = Number(value);
+
+    if (!Number.isFinite(number) || number <= 0) {
+      return null;
+    }
+
+    return roundQuantity(Math.min(number, MAX_QUANTITY));
+  }
+
   function parseTags(value) {
     const source = Array.isArray(value)
       ? value
@@ -180,6 +198,10 @@ if (app) {
     return unit ? `${text} ${unit}` : text;
   }
 
+  function formatDays(value) {
+    return `${dayFormatter.format(Math.max(0, value))}日`;
+  }
+
   function isLowStock(item) {
     return item.quantity <= item.threshold;
   }
@@ -192,6 +214,33 @@ if (app) {
     });
 
     return Array.from(tags).sort((a, b) => a.localeCompare(b, "ja-JP"));
+  }
+
+  function normalizeUsageRecord(record, usedIds) {
+    const id = sanitizeText(record.id, 80) || createId("usage");
+    const amount = parseUsageAmount(record.amount);
+
+    if (usedIds.has(id) || amount === null) {
+      return null;
+    }
+
+    usedIds.add(id);
+
+    return {
+      id,
+      amount,
+      at: normalizeIsoDate(record.at),
+    };
+  }
+
+  function normalizeUsageRecords(records) {
+    const usedIds = new Set();
+
+    return (Array.isArray(records) ? records : [])
+      .map((record) => normalizeUsageRecord(record, usedIds))
+      .filter(Boolean)
+      .sort((a, b) => new Date(a.at) - new Date(b.at))
+      .slice(-MAX_USAGE_RECORDS);
   }
 
   function normalizeStoredItem(item, usedIds) {
@@ -216,6 +265,7 @@ if (app) {
       unit: sanitizeText(item.unit, 20),
       threshold: parseOptionalQuantity(item.threshold, 0),
       tags: parseTags(item.tags),
+      usageRecords: normalizeUsageRecords(item.usageRecords),
       createdAt: normalizeIsoDate(item.createdAt),
       updatedAt: normalizeIsoDate(item.updatedAt),
     };
@@ -243,6 +293,33 @@ if (app) {
     };
   }
 
+  function normalizeStatePayload(payload) {
+    if (
+      !payload ||
+      payload.version !== DATA_VERSION ||
+      !Array.isArray(payload.items)
+    ) {
+      throw new Error("現在のアプリで書き出したJSONを選んでください。");
+    }
+
+    const itemIds = new Set();
+    const historyIds = new Set();
+    const items = payload.items
+      .map((item) => normalizeStoredItem(item, itemIds))
+      .filter(Boolean);
+    const history = Array.isArray(payload.history)
+      ? payload.history
+          .map((entry) => normalizeStoredHistory(entry, historyIds))
+          .filter(Boolean)
+          .slice(0, MAX_OPERATION_HISTORY)
+      : [];
+
+    return {
+      items,
+      history,
+    };
+  }
+
   function loadState() {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -251,21 +328,9 @@ if (app) {
         return;
       }
 
-      const parsed = JSON.parse(raw);
-      const itemIds = new Set();
-      const historyIds = new Set();
-
-      state.items = Array.isArray(parsed.items)
-        ? parsed.items
-            .map((item) => normalizeStoredItem(item, itemIds))
-            .filter(Boolean)
-        : [];
-      state.history = Array.isArray(parsed.history)
-        ? parsed.history
-            .map((entry) => normalizeStoredHistory(entry, historyIds))
-            .filter(Boolean)
-            .slice(0, MAX_HISTORY)
-        : [];
+      const parsed = normalizeStatePayload(JSON.parse(raw));
+      state.items = parsed.items;
+      state.history = parsed.history;
     } catch (error) {
       setMessage(
         elements.ioMessage,
@@ -280,7 +345,7 @@ if (app) {
       window.localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
-          version: 1,
+          version: DATA_VERSION,
           items: state.items,
           history: state.history,
         }),
@@ -309,7 +374,7 @@ if (app) {
       at: new Date().toISOString(),
     });
 
-    state.history = state.history.slice(0, MAX_HISTORY);
+    state.history = state.history.slice(0, MAX_OPERATION_HISTORY);
   }
 
   function getItemFromForm() {
@@ -411,6 +476,7 @@ if (app) {
         const item = {
           id: createId("item"),
           ...formItem,
+          usageRecords: [],
           createdAt: now,
           updatedAt: now,
         };
@@ -455,9 +521,25 @@ if (app) {
     render();
   }
 
+  function addUsageRecord(item, amount, at) {
+    const existingRecords = Array.isArray(item.usageRecords)
+      ? item.usageRecords
+      : [];
+
+    item.usageRecords = normalizeUsageRecords([
+      ...existingRecords,
+      {
+        id: createId("usage"),
+        amount,
+        at,
+      },
+    ]);
+  }
+
   function updateQuantity(item, amount, action) {
     const before = item.quantity;
     let after = before;
+    const now = new Date().toISOString();
 
     if (action === "add") {
       after = before + amount;
@@ -467,10 +549,11 @@ if (app) {
       }
 
       after = before - amount;
+      addUsageRecord(item, amount, now);
     }
 
     item.quantity = roundQuantity(after);
-    item.updatedAt = new Date().toISOString();
+    item.updatedAt = now;
     addHistory(action, item, {
       amount,
       before,
@@ -520,6 +603,132 @@ if (app) {
     });
   }
 
+  function getSortedUsageRecords(item) {
+    return (Array.isArray(item.usageRecords) ? item.usageRecords : [])
+      .slice()
+      .sort((a, b) => new Date(a.at) - new Date(b.at));
+  }
+
+  function getMedian(values) {
+    if (!values.length) {
+      return null;
+    }
+
+    const sortedValues = values.slice().sort((a, b) => a - b);
+    const middle = Math.floor(sortedValues.length / 2);
+
+    if (sortedValues.length % 2 === 0) {
+      return (sortedValues[middle - 1] + sortedValues[middle]) / 2;
+    }
+
+    return sortedValues[middle];
+  }
+
+  function getConsumptionSamples(records) {
+    const samples = [];
+
+    for (let index = 1; index < records.length; index += 1) {
+      const previousTime = new Date(records[index - 1].at).getTime();
+      const currentTime = new Date(records[index].at).getTime();
+      const amount = records[index].amount;
+      const elapsedDays = (currentTime - previousTime) / MS_PER_DAY;
+
+      if (
+        Number.isFinite(elapsedDays) &&
+        elapsedDays > 0 &&
+        Number.isFinite(amount) &&
+        amount > 0
+      ) {
+        samples.push(elapsedDays / amount);
+      }
+    }
+
+    return samples;
+  }
+
+  function getConsumptionConfidence(recordCount) {
+    if (recordCount >= MAX_USAGE_RECORDS) {
+      return "目安値";
+    }
+
+    if (recordCount >= 4) {
+      return "参考値";
+    }
+
+    return "データ不足";
+  }
+
+  function getThresholdForecast(item, consumptionDays, records) {
+    if (isLowStock(item)) {
+      return {
+        text: "閾値以下",
+        detail: "現在数量が閾値以下です",
+      };
+    }
+
+    const latestRecord = records[records.length - 1];
+
+    if (!latestRecord || consumptionDays === null) {
+      return {
+        text: "算出不可",
+        detail: "使用記録が2件必要です",
+      };
+    }
+
+    const latestUseTime = new Date(latestRecord.at).getTime();
+
+    if (!Number.isFinite(latestUseTime)) {
+      return {
+        text: "算出不可",
+        detail: "前回使用日を読み取れません",
+      };
+    }
+
+    const referenceTime = Math.max(pageOpenedAt.getTime(), latestUseTime);
+    const elapsedDays = Math.max(0, (referenceTime - latestUseTime) / MS_PER_DAY);
+    const remainingUnits = Math.max(0, item.quantity - item.threshold);
+    const daysUntilThreshold = Math.max(
+      0,
+      remainingUnits * consumptionDays - elapsedDays,
+    );
+
+    return {
+      text: `約${formatDays(daysUntilThreshold)}`,
+      detail: `前回使用 ${dateFormatter.format(new Date(latestRecord.at))}`,
+    };
+  }
+
+  function getConsumptionInfo(item) {
+    const records = getSortedUsageRecords(item);
+    const samples = getConsumptionSamples(records);
+    const consumptionDays = getMedian(samples);
+    const confidence =
+      consumptionDays === null
+        ? "データ不足"
+        : getConsumptionConfidence(records.length);
+    const forecast = getThresholdForecast(item, consumptionDays, records);
+
+    return {
+      recordCount: records.length,
+      confidence,
+      consumptionText:
+        consumptionDays === null ? "算出不可" : `約${formatDays(consumptionDays)}`,
+      consumptionDetail: `${confidence} / 使用記録 ${records.length}/${MAX_USAGE_RECORDS}件`,
+      thresholdText: forecast.text,
+      thresholdDetail: forecast.detail,
+    };
+  }
+
+  function createMetric(label, value, detail) {
+    const metric = createNode("div", "metric-item");
+    metric.append(
+      createNode("dt", "", label),
+      createNode("dd", "", value),
+      createNode("span", "", detail),
+    );
+    return metric;
+  }
+
   function renderItem(item) {
     const card = createNode("article", "item-card");
     card.dataset.itemId = item.id;
@@ -563,6 +772,21 @@ if (app) {
     );
     status.append(quantityValue, statusPill);
 
+    const consumptionInfo = getConsumptionInfo(item);
+    const metricList = createNode("dl", "metric-list");
+    metricList.append(
+      createMetric(
+        `${item.unit ? `1${item.unit}` : "1単位"}消費日数`,
+        consumptionInfo.consumptionText,
+        consumptionInfo.consumptionDetail,
+      ),
+      createMetric(
+        "閾値までの日数",
+        consumptionInfo.thresholdText,
+        consumptionInfo.thresholdDetail,
+      ),
+    );
+
     const stockForm = createNode("form", "stock-form");
     stockForm.dataset.stockForm = item.id;
 
@@ -602,7 +826,7 @@ if (app) {
     cardMessage.dataset.cardMessage = "";
     cardMessage.setAttribute("role", "alert");
     stockForm.append(adjustLabel, buttonGroup, cardMessage);
-    quantityArea.append(status, stockForm);
+    quantityArea.append(status, metricList, stockForm);
 
     card.append(header, tags, quantityArea);
     return card;
@@ -751,7 +975,7 @@ if (app) {
       elements.clearHistory.disabled = state.history.length === 0;
     }
 
-    state.history.forEach((entry) => {
+    state.history.slice(0, MAX_OPERATION_HISTORY).forEach((entry) => {
       const item = createNode("li", "");
       const text = formatHistory(entry);
       const time = new Date(entry.at);
@@ -861,7 +1085,7 @@ if (app) {
 
   function exportJson() {
     const payload = {
-      version: 1,
+      version: DATA_VERSION,
       exportedAt: new Date().toISOString(),
       items: state.items,
       history: state.history,
@@ -875,29 +1099,6 @@ if (app) {
     setMessage(elements.ioMessage, "JSONを書き出しました。", "success");
   }
 
-  function validateJsonPayload(payload) {
-    if (!payload || !Array.isArray(payload.items)) {
-      throw new Error("JSONの形式が正しくありません。");
-    }
-
-    const itemIds = new Set();
-    const historyIds = new Set();
-    const items = payload.items
-      .map((item) => normalizeStoredItem(item, itemIds))
-      .filter(Boolean);
-    const history = Array.isArray(payload.history)
-      ? payload.history
-          .map((entry) => normalizeStoredHistory(entry, historyIds))
-          .filter(Boolean)
-          .slice(0, MAX_HISTORY)
-      : [];
-
-    return {
-      items,
-      history,
-    };
-  }
-
   function importJsonFile(file) {
     if (!file) {
       return;
@@ -906,7 +1107,7 @@ if (app) {
     const reader = new FileReader();
     reader.addEventListener("load", () => {
       try {
-        const payload = validateJsonPayload(JSON.parse(reader.result));
+        const payload = normalizeStatePayload(JSON.parse(reader.result));
 
         if (
           !window.confirm(

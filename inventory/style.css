@@ -501,6 +501,38 @@ button:focus-visible,
   align-items: center;
 }
 
+.metric-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.metric-item {
+  border-top: 1px solid var(--soft-line);
+  padding-top: 8px;
+}
+
+.metric-item dt {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.metric-item dd {
+  margin: 2px 0 0;
+  font-size: 1.08rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.metric-item span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  margin-top: 3px;
+}
+
 .status-pill {
   background: var(--accent-soft);
   color: var(--accent-dark);
@@ -639,11 +671,18 @@ button:focus-visible,
   }
 
   .quantity-area {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(290px, auto);
     align-items: start;
   }
 
+  .status-line,
+  .metric-list {
+    grid-column: 1;
+  }
+
   .stock-form {
+    grid-column: 2;
+    grid-row: 1 / span 2;
     min-width: 290px;
   }
 }
