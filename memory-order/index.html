@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>メモリーオーダー | ahaish</title>
+    <meta
+      name="description"
+      content="数字と位置を覚え、1から順番に選ぶ記憶ゲームです。"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="back-link" href="../">目次へ戻る</a>
+      <h1>メモリーオーダー</h1>
+      <p>数字の位置を覚えて、1から順番に見つけてください。</p>
+    </header>
+
+    <main class="memory-order-app" data-memory-order-app>
+      <section
+        class="panel settings-panel"
+        data-settings-panel
+        aria-labelledby="settings-heading"
+      >
+        <h2 id="settings-heading">ゲーム設定</h2>
+        <label class="level-label" for="grid-size">マスの大きさ N</label>
+        <select id="grid-size" data-grid-size></select>
+        <div class="score-section">
+          <h3 data-score-heading>N=2 の上位スコア</h3>
+          <div class="score-table-wrap">
+            <table>
+              <caption class="visually-hidden" data-score-caption>N=2 の上位スコア</caption>
+              <thead>
+                <tr>
+                  <th scope="col">順位</th>
+                  <th scope="col">合計</th>
+                  <th scope="col">暗記</th>
+                  <th scope="col">想起</th>
+                  <th scope="col">ミス</th>
+                </tr>
+              </thead>
+              <tbody data-score-body></tbody>
+            </table>
+          </div>
+          <p class="empty-scores" data-empty-scores>まだ記録がありません。</p>
+        </div>
+      </section>
+
+      <section
+        class="panel board-panel"
+        data-board-panel
+        aria-labelledby="board-heading"
+      >
+        <h2 id="board-heading">ゲーム盤</h2>
+        <p class="game-status" data-game-status aria-live="polite"></p>
+        <div
+          class="game-board"
+          data-game-board
+          role="group"
+          aria-label="N=2 のゲーム盤"
+        ></div>
+      </section>
+
+      <section class="panel controls-panel" aria-label="ゲーム操作">
+        <div class="button-row">
+          <button type="button" class="primary-button" data-memorize>暗記</button>
+          <button type="button" class="primary-button" data-recall hidden>想起</button>
+        </div>
+        <p class="result-message" data-result-message role="status" hidden></p>
+        <p class="save-message" data-save-message role="status" hidden></p>
+      </section>
+
+      <section class="panel note-panel" aria-label="使い方とデータの扱い">
+        <details>
+          <summary>使い方とデータの扱い</summary>
+          <p>暗記で数字と位置を覚え、想起後は1から順にマスを選びます。</p>
+          <p>合計は暗記時間、想起時間、ミス1回につき1秒の合計です。</p>
+          <p>上位スコアと解放状況は、このブラウザ内にだけ保存されます。</p>
+        </details>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
